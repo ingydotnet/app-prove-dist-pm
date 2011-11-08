@@ -12,6 +12,7 @@ SYNOPSIS
                                           # and your perl. prove-dist will look 
                                           # for this lib when you test your dist
         prove-dist wipe --perl=...      # delete the custom locallib
+        prove-dist perls                # list perls to test against
 
 DESCRIPTION
     When releasing a Perl module distribution, it is good to test it on a
@@ -38,6 +39,7 @@ STATUS
         * Only likes perlbrew
         * Many hardcoded assumptions
         * Scan not implemented
+        * Not fully configurable
         * Will probably push your grandmother down the stairs
 
     Suggestions and patches welcome!

@@ -106,13 +106,13 @@ sub execute {
 }
 
 #------------------------------------------------------------------------------#
-package App::Prove::Dist::Command::deps;
+package App::Prove::Dist::Command::list;
 App::Prove::Dist->import( -command );
 use Mouse;
 extends 'App::Prove::Dist::Command';
 
 use constant abstract => 'List your declared deps';
-use constant usage_desc => 'prove-dist deps';
+use constant usage_desc => 'prove-dist list';
 
 sub execute {
     my ($self) = @_;
@@ -130,9 +130,45 @@ extends 'App::Prove::Dist::Command';
 use constant abstract => 'Scan your dist for deps';
 use constant usage_desc => 'prove-dist scan';
 
+use IO::All;
+
 sub execute {
     my ($self) = @_;
     die "Sorry. 'prove-dist scan' not yet implemented.\n";
+    $self->setup();
+    print YAML::XS::Dump(
+        Module::ScanDeps::scan_deps(
+            files => [map "$_", io('lib')->All_Files],
+            recurse => 0,
+        )
+    );
+    $self->cleanup();
+}
+
+#------------------------------------------------------------------------------#
+package App::Prove::Dist::Command::perls;
+App::Prove::Dist->import( -command );
+use Mouse;
+extends 'App::Prove::Dist::Command';
+
+use constant abstract => 'List your perls';
+use constant usage_desc => 'prove-dist perls';
+
+use IO::All;
+
+sub execute {
+    my ($self) = @_;
+    $self->setup();
+    for my $perl (sort {"$a" cmp "$b"} @{io($self->perls_root)}) {
+        my $name = $perl->filename;
+        my $locallib = $self->get_locallib($name);
+        my $status = -e $locallib
+        ? " -> $locallib"
+        : '';
+        $name =~ s/^perl-// or next;
+        print "$name$status\n";
+    }
+    $self->cleanup();
 }
 
 #------------------------------------------------------------------------------#
@@ -214,20 +250,22 @@ sub wipe {
     $self->run_cli_cmd("rm -fr $locallib");
 }
 
-my $perls_root = "$ENV{HOME}/perl5/perlbrew/perls";
+use constant perls_root => "$ENV{HOME}/perl5/perlbrew/perls";
+
 sub get_locallib {
     my ($self, $perl) = @_;
+    my $perls_root = $self->perls_root;
     $perl =~ s/^$perls_root//;
     $perl =~ s/[^\w\.]+/-/g;
     $perl =~ s/-bin-perl$//;
     $perl =~ s/^-?(.*?)-?$/$1/;
     my $dist = $self->_meta->{name} or die;
-    my $ll = "$ENV{HOME}/perl5/prove-dist/$dist/$perl";
-    return $ll;
+    return "$ENV{HOME}/perl5/prove-dist/$dist/$perl";
 }
 
 sub get_perl_list {
     my ($self) = @_;
+    my $perls_root = $self->perls_root;
     my $perls = $self->perl || do {
         my $perl = `which perl`;
         chomp $perl;
@@ -319,6 +357,7 @@ sub validate_args {
                                       # and your perl. prove-dist will look 
                                       # for this lib when you test your dist
     prove-dist wipe --perl=...      # delete the custom locallib
+    prove-dist perls                # list perls to test against
 
 =head1 STATUS
 
@@ -330,6 +369,7 @@ Currently:
     * Only likes perlbrew
     * Many hardcoded assumptions
     * Scan not implemented
+    * Not fully configurable
     * Will probably push your grandmother down the stairs
 
 Suggestions and patches welcome!
