@@ -169,7 +169,8 @@ sub prove {
     my $tarball = "$dist.tar.gz";
     die "'$tarball' not found" unless -e $tarball;
     my $home = Cwd::cwd();
-    $self->run_cli_cmd("tar xzf $tarball");
+    $self->run_cli_cmd("tar xzf $tarball")
+        unless -d $dist;
     chdir $dist or die "Can't chdir to $dist";
     io('lib/lib/core/only.pm')->assert->print(io($INC{'lib/core/only.pm'})->all);
 
