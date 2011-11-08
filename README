@@ -1,8 +1,8 @@
 NAME
-    App::Prove::Dist - Prove that a Perl Module Dist is Good to Go
+    App::Prove::Dist - Prove that a Perl Module Dist is OK for CPAN
 
 SYNOPSIS
-        prove-dist test                 # make dist; unzip dist;
+        prove-dist                      # make dist; unzip dist;
                                         # test against core-only + custom-locallib
         prove-dist test --perl=5.14.1   # use a specific perl
         prove-dist test --perl=5.10.1 --perl=5.12.0 --perl=5.14.2
@@ -24,8 +24,10 @@ DESCRIPTION
     App::Prove::Dist does all this for you:
 
         cd your-dist-dir
-        prove-dist make --perl=5.14.2   # Create a custom locallib
-        prove-dist test --perl=5.14.2   # Prove against clean perl + locallib
+        prove-dist perls                # Get a list of perls to use
+        prove-dist make --perl=5.14.2   # Create a custom locallib for a perl
+        prove-dist perls                # List now shows locallib
+        prove-dist test --perl=5.14.2   # Prove against clean perl + new locallib
 
     "prove-dist" will use "lib-core-only" and your custom locallib to prove
     your "t/" tests, so you can be more certain it will pass cpantesters.

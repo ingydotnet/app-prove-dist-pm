@@ -1,0 +1,4 @@
+- Support DZ and MB
+- Support env vars
+- use File::Spec
+- Support win32

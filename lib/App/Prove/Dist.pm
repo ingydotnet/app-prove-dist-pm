@@ -1,6 +1,6 @@
 ##
 # name:      App::Prove::Dist
-# abstract:  Prove that a Perl Module Dist is Good to Go
+# abstract:  Prove that a Perl Module Dist is OK for CPAN
 # author:    Ingy döt Net <ingy@cpan.org>
 # license:   perl
 # copyright: 2011
@@ -23,18 +23,16 @@ use Mouse;
 extends 'MouseX::App::Cmd';
 use App::Cmd::Setup -app;
 
+our $VERSION = '0.02';
+
+# XXX Doesn't seem to always work
 use constant default_command => 'test';
 
-our $VERSION = '0.01';
-
 #------------------------------------------------------------------------------#
-package App::Prove::Dist::Command::test;
-App::Prove::Dist->import( -command );
-use Mouse;
-extends 'App::Prove::Dist::Command';
-
-use constant abstract => 'Test the Perl module dist from the current directory';
-use constant usage_desc => 'prove-dist test --perl=<perl-version>';
+# Common options
+#------------------------------------------------------------------------------#
+package App::Prove::Dist::common_options;
+use Mouse::Role;
 
 has perl => (
     is => 'ro',
@@ -42,17 +40,34 @@ has perl => (
     documentation => 'Version or path of perl to use',
 );
 
+#------------------------------------------------------------------------------#
+package App::Prove::Dist::Command::test;
+App::Prove::Dist->import( -command );
+use Mouse;
+extends 'App::Prove::Dist::Command';
+with 'App::Prove::Dist::common_options';
+
+use constant abstract => 'Test the Perl module dist from the current directory';
+use constant usage_desc => "prove-dist test --flags='-v' --perl=<perl-version>";
+
+has flags => (
+    is => 'ro',
+    isa => 'Str',
+    default => sub { '' },
+    documentation => "Commandline flags to be passed to 'prove'",
+);
+
 has dirty => (
     is => 'ro',
     isa => 'Bool',
-    documentation => "Don't clean up after prove",
+    documentation => "Don't clean up after test",
 );
 
 sub execute {
     my ($self) = @_;
     $self->setup();
     for my $perl ($self->get_perl_list) {
-        $self->prove($perl);
+        $self->test($perl);
     }
     $self->cleanup() unless $self->dirty;
 }
@@ -62,15 +77,10 @@ package App::Prove::Dist::Command::make;
 App::Prove::Dist->import( -command );
 use Mouse;
 extends 'App::Prove::Dist::Command';
+with 'App::Prove::Dist::common_options';
 
-use constant abstract => 'Make a locallib for your dist/perl';
+use constant abstract => 'Make a custom locallib for your dist/perl';
 use constant usage_desc => 'prove-dist make --perl=<perl-version>';
-
-has perl => (
-    is => 'ro',
-    isa => 'ArrayRef[Str]',
-    documentation => 'Version or path of perl to use',
-);
 
 sub execute {
     my ($self) = @_;
@@ -86,15 +96,10 @@ package App::Prove::Dist::Command::wipe;
 App::Prove::Dist->import( -command );
 use Mouse;
 extends 'App::Prove::Dist::Command';
+with 'App::Prove::Dist::common_options';
 
-use constant abstract => 'Remove the locallib for your dist/perl';
+use constant abstract => 'Remove the custom locallib for your dist/perl';
 use constant usage_desc => 'prove-dist wipe --perl=<perl-version>';
-
-has perl => (
-    is => 'ro',
-    isa => 'ArrayRef[Str]',
-    documentation => 'Version or path of perl to use',
-);
 
 sub execute {
     my ($self) = @_;
@@ -151,7 +156,7 @@ App::Prove::Dist->import( -command );
 use Mouse;
 extends 'App::Prove::Dist::Command';
 
-use constant abstract => 'List your perls';
+use constant abstract => 'List your available perls';
 use constant usage_desc => 'prove-dist perls';
 
 use IO::All;
@@ -196,10 +201,28 @@ has _meta => (is => 'rw');
 has _dist_dir => (is => 'rw');
 has _dist_type => (is => 'rw');
 
+sub perlbrew_root {
+    return (
+        $ENV{PERLBREW_ROOT} ||
+        "$ENV{HOME}/perl5/perlbrew"
+    );
+}
+
+sub prove_dist_root {
+    return (
+        $ENV{PERL_PROVE_DIST_ROOT} ||
+        (Cwd::abs_path(perlbrew_root() . "/../prove-dist"))
+    );
+}
+
+sub perls_root {
+    return ( perlbrew_root() . "/perls" );
+}
+
 # use XXX;
 
 my $num = 0;
-sub prove {
+sub test {
     my ($self, $perl) = @_;
     my $dist = $self->_dist_dir;
     my $tarball = "$dist.tar.gz";
@@ -210,7 +233,7 @@ sub prove {
     chdir $dist or die "Can't chdir to $dist";
     io('lib/lib/core/only.pm')->assert->print(io($INC{'lib/core/only.pm'})->all);
 
-    my $flags = $ENV{PERL_PROVE_DIST_FLAGS} // '-v';
+    my $flags = $self->flags;
     (my $path = $perl) =~ s!/perl$!! or die;
     local $ENV{PATH} = "$path:$ENV{PATH}";
     my $locallib = $self->get_locallib($perl);
@@ -250,8 +273,6 @@ sub wipe {
     $self->run_cli_cmd("rm -fr $locallib");
 }
 
-use constant perls_root => "$ENV{HOME}/perl5/perlbrew/perls";
-
 sub get_locallib {
     my ($self, $perl) = @_;
     my $perls_root = $self->perls_root;
@@ -260,7 +281,7 @@ sub get_locallib {
     $perl =~ s/-bin-perl$//;
     $perl =~ s/^-?(.*?)-?$/$1/;
     my $dist = $self->_meta->{name} or die;
-    return "$ENV{HOME}/perl5/prove-dist/$dist/$perl";
+    return prove_dist_root() . "/$dist/$perl";
 }
 
 sub get_perl_list {
@@ -347,7 +368,7 @@ sub validate_args {
 
 =head1 SYNOPSIS
 
-    prove-dist test                 # make dist; unzip dist;
+    prove-dist                      # make dist; unzip dist;
                                     # test against core-only + custom-locallib
     prove-dist test --perl=5.14.1   # use a specific perl
     prove-dist test --perl=5.10.1 --perl=5.12.0 --perl=5.14.2
@@ -385,8 +406,10 @@ for each module you release.
 App::Prove::Dist does all this for you:
 
     cd your-dist-dir
-    prove-dist make --perl=5.14.2   # Create a custom locallib
-    prove-dist test --perl=5.14.2   # Prove against clean perl + locallib
+    prove-dist perls                # Get a list of perls to use
+    prove-dist make --perl=5.14.2   # Create a custom locallib for a perl
+    prove-dist perls                # List now shows locallib
+    prove-dist test --perl=5.14.2   # Prove against clean perl + new locallib
 
 C<prove-dist> will use C<lib-core-only> and your custom locallib to prove your
 C<t/> tests, so you can be more certain it will pass cpantesters.
