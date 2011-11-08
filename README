@@ -2,16 +2,16 @@ NAME
     App::Prove::Dist - Prove that a Perl Module Dist is Good to Go
 
 SYNOPSIS
-        prove-dist                  # make dist; unzip dist;
-                                    # test against core-only + custom-locallib
-        prove-dist --perl=5.14.1    # use a specific perl
-        prove-dist --perl=5.10.1 --perl=5.12.0 --perl=5.14.2
-        prove-dist list             # list your defined dependencies
-        prove-dist scan             # scan for your required dependencies
-        prove-dist make --perl=...  # make a custom locallib for your dist
-                                      # and your perl. prove-dist will look 
-                                      # for this lib when you test your dist
-        prove-dist wipe --perl=...  # delete the custom locallib
+        prove-dist test                 # make dist; unzip dist;
+                                        # test against core-only + custom-locallib
+        prove-dist test --perl=5.14.1   # use a specific perl
+        prove-dist test --perl=5.10.1 --perl=5.12.0 --perl=5.14.2
+        prove-dist list                 # list your defined dependencies
+        prove-dist scan                 # scan for your required dependencies
+        prove-dist make --perl=...      # make a custom locallib for your dist
+                                          # and your perl. prove-dist will look 
+                                          # for this lib when you test your dist
+        prove-dist wipe --perl=...      # delete the custom locallib
 
 DESCRIPTION
     When releasing a Perl module distribution, it is good to test it on a
@@ -25,7 +25,6 @@ DESCRIPTION
         cd your-dist-dir
         prove-dist make --perl=5.14.2   # Create a custom locallib
         prove-dist test --perl=5.14.2   # Prove against clean perl + locallib
-        prove-dist --perl=5.14.2        # Same as above. 'test' is default command
 
     "prove-dist" will use "lib-core-only" and your custom locallib to prove
     your "t/" tests, so you can be more certain it will pass cpantesters.

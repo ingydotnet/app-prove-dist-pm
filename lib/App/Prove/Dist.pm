@@ -178,8 +178,8 @@ sub prove {
     local $ENV{PATH} = "$path:$ENV{PATH}";
     my $locallib = $self->get_locallib($perl);
     local $ENV{PERL5LIB} = -e $locallib
-    ? "./lib:$locallib/lib/perl5"
-    : './lib';
+    ? "./inc:./lib:$locallib/lib/perl5"
+    : './inc:./lib';
     local $ENV{PERL5OPT};
     $self->run_cli_cmd("prove $flags -Mlib::core::only t/");
     chdir $home or die "Can't chdir '$home'";
@@ -308,16 +308,16 @@ sub validate_args {
 
 =head1 SYNOPSIS
 
-    prove-dist                  # make dist; unzip dist;
-                                # test against core-only + custom-locallib
-    prove-dist --perl=5.14.1    # use a specific perl
-    prove-dist --perl=5.10.1 --perl=5.12.0 --perl=5.14.2
-    prove-dist list             # list your defined dependencies
-    prove-dist scan             # scan for your required dependencies
-    prove-dist make --perl=...  # make a custom locallib for your dist
-                                  # and your perl. prove-dist will look 
-                                  # for this lib when you test your dist
-    prove-dist wipe --perl=...  # delete the custom locallib
+    prove-dist test                 # make dist; unzip dist;
+                                    # test against core-only + custom-locallib
+    prove-dist test --perl=5.14.1   # use a specific perl
+    prove-dist test --perl=5.10.1 --perl=5.12.0 --perl=5.14.2
+    prove-dist list                 # list your defined dependencies
+    prove-dist scan                 # scan for your required dependencies
+    prove-dist make --perl=...      # make a custom locallib for your dist
+                                      # and your perl. prove-dist will look 
+                                      # for this lib when you test your dist
+    prove-dist wipe --perl=...      # delete the custom locallib
 
 =head1 STATUS
 
@@ -346,7 +346,6 @@ App::Prove::Dist does all this for you:
     cd your-dist-dir
     prove-dist make --perl=5.14.2   # Create a custom locallib
     prove-dist test --perl=5.14.2   # Prove against clean perl + locallib
-    prove-dist --perl=5.14.2        # Same as above. 'test' is default command
 
 C<prove-dist> will use C<lib-core-only> and your custom locallib to prove your
 C<t/> tests, so you can be more certain it will pass cpantesters.
